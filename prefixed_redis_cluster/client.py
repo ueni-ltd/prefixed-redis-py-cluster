@@ -29,10 +29,10 @@ class PrefixedStrictRedisCluster(StrictRedisCluster):
 
     # BASIC KEY COMMANDS
     def append(self, key, value):
-        return super().append(self.make_keys(key), value)
+        return super().append(self.make_key(key), value)
 
     def bitcount(self, key, start=None, end=None):
-        return super().bitcount(self.make_keys(key), start=start, end=end)
+        return super().bitcount(self.make_key(key), start=start, end=end)
 
     def bitop(self, operation, dest, *keys):
         return super().bitop(operation, self.make_key(dest), *self.make_keys(keys))
@@ -44,7 +44,7 @@ class PrefixedStrictRedisCluster(StrictRedisCluster):
         return super().decr(self.make_key(name), amount=amount)
 
     def delete(self, *names):
-        return super().delete(self.make_keys(names))
+        return super().delete(*self.make_keys(names))
 
     def dump(self, name):
         return super().dump(self.make_key(name))
@@ -262,7 +262,156 @@ class PrefixedStrictRedisCluster(StrictRedisCluster):
         return super().sunion(self.make_key(dest), self.make_keys(keys))
 
     # SORTED SET COMMANDS
-    # TODO: everything after
+    def zadd(self, name, *args, **kwargs):
+        return super().zadd(self.make_key(name), *args, **kwargs)
+
+    def zcard(self, name):
+        return super().zcard(self.make_key(name))
+
+    def zcount(self, name, min, max):
+        return super().zcount(self.make_key(name), min, max)
+
+    def zincrby(self, name, value, amount=1):
+        return super().zincrby(self.make_key(name), value, amount=amount)
+
+    def zinterstore(self, dest, keys, aggregate=None):
+        return super().zinterstore(self.make_key(dest), self.make_keys(keys), aggregate=aggregate)
+
+    def zlexcount(self, name, min, max):
+        return super().zlexcount(self.make_key(name), min, max)
+
+    def zrange(self, name, start, end, desc=False, withscores=False, score_cast_func=float):
+        return super().zrange(
+            self.make_key(name), start, end, desc=desc, withscores=withscores, score_cast_func=score_cast_func
+        )
+
+    def zrangebylex(self, name, min, max, start=None, num=None):
+        return super().zrangebylex(self.make_key(name), min, max, start=start, num=num)
+
+    def zrevrangebylex(self, name, max, min, start=None, num=None):
+        return super().zrevrangebylex(self.make_key(name), max, min, start=start, num=num)
+
+    def zrangebyscore(self, name, min, max, start=None, num=None, withscores=False, score_cast_func=float):
+        return super().zrangebyscore(
+            self.make_key(name), min, max, start=start, num=num, withscores=withscores, score_cast_func=score_cast_func
+        )
+
+    def zrank(self, name, value):
+        return super().zrank(self.make_key(name), value)
+
+    def zrem(self, name, *values):
+        return super().zrem(self.make_key(name), *values)
+
+    def zremrangebylex(self, name, min, max):
+        return super().zremrangebylex(self.make_key(name), min, max)
+
+    def zremrangebyrank(self, name, min, max):
+        return super().zremrangebyrank(self.make_key(name), min, max)
+
+    def zremrangebyscore(self, name, min, max):
+        return super().zremrangebyscore(self.make_key(name), min, max)
+
+    def zrevrange(self, name, start, end, withscores=False, score_cast_func=float):
+        return super().zrevrange(
+            self.make_key(name), start, end, withscores=withscores, score_cast_func=score_cast_func
+        )
+
+    def zrevrangebyscore(self, name, max, min, start=None, num=None, withscores=False, score_cast_func=float):
+        return super().zrevrangebyscore(
+            self.make_key(name), max, min, start=start, num=num, withscores=withscores, score_cast_func=score_cast_func
+        )
+
+    def zrevrank(self, name, value):
+        return super().zrevrank(self.make_key(name), value)
+
+    def zscore(self, name, value):
+        return super().zscore(self.make_key(name), value)
+
+    def zunionstore(self, dest, keys, aggregate=None):
+        return super().zunionstore(self.make_key(dest), self.make_keys(keys), aggregate=aggregate)
+
+    # HYPERLOGLOG COMMANDS
+    def pfadd(self, name, *values):
+        return super().pfadd(self.make_key(name), *values)
+
+    def pfcount(self, *sources):
+        return super().pfcount(*self.make_keys(sources))
+
+    def pfmerge(self, dest, *sources):
+        return super().pfmerge(self.make_key(dest), *self.make_keys(sources))
+
+    # HASH COMMANDS
+    def hdel(self, name, *keys):
+        return super().hdel(self.make_key(name), *keys)
+
+    def hexists(self, name, key):
+        return super().hexists(self.make_key(name), key)
+
+    def hget(self, name, key):
+        return super().hget(self.make_key(name), key)
+
+    def hgetall(self, name):
+        return super().hgetall(self.make_key(name))
+
+    def hincrby(self, name, key, amount=1):
+        return super().hincrby(self.make_key(name), key, amount=amount)
+
+    def hincrbyfloat(self, name, key, amount=1.0):
+        return super().hincrbyfloat(self.make_key(name), key, amount=amount)
+
+    def hkeys(self, name):
+        return super().hkeys(self.make_key(name))
+
+    def hlen(self, name):
+        return super().hlen(self.make_key(name))
+
+    def hset(self, name, key, value):
+        return super().hset(self.make_key(name), key, value)
+
+    def hsetnx(self, name, key, value):
+        return super().hsetnx(self.make_key(name), key, value)
+
+    def hmset(self, name, mapping):
+        return super().hmset(self.make_key(name), mapping)
+
+    def hmget(self, name, keys, *args):
+        keys = list_or_args(keys, args)
+        return super().hmget(self.make_key(name), self.make_keys(keys))
+
+    def hvals(self, name):
+        return super().hvals(self.make_key(name))
+
+    def hstrlen(self, name, key):
+        return super().hstrlen(self.make_key(name), key)
+
+    # GEO COMMANDS
+    def geoadd(self, name, *values):
+        return super().geoadd(self.make_key(name), *values)
+
+    def geodist(self, name, place1, place2, unit=None):
+        return super().geodist(self.make_key(name), place1, place2, unit=unit)
+
+    def geohash(self, name, *values):
+        return super().geohash(self.make_key(name), *values)
+
+    def geopos(self, name, *values):
+        return super().geopos(self.make_key(name), *values)
+
+    def georadius(self, name, longitude, latitude, radius, unit=None,
+                  withdist=False, withcoord=False, withhash=False, count=None,
+                  sort=None, store=None, store_dist=None):
+        return super().georadius(
+            self.make_key(name), longitude, latitude, radius, unit=unit, withdist=withdist, withcoord=withcoord,
+            withhash=withhash, count=count, sort=sort, store=store, store_dist=store_dist
+        )
+
+    def georadiusbymember(self, name, member, radius, unit=None,
+                          withdist=False, withcoord=False, withhash=False,
+                          count=None, sort=None, store=None, store_dist=None):
+        return super().georadiusbymember(
+            self.make_key(name), member, radius, unit=unit, withdist=withdist, withcoord=withcoord,
+            withhash=withhash, count=count, sort=sort, store=store, store_dist=store_dist
+        )
 
 
 class PrefixedStrictClusterPipeline(StrictClusterPipeline, PrefixedStrictRedisCluster):
