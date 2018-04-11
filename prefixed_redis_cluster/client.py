@@ -8,18 +8,38 @@ from rediscluster.pipeline import StrictClusterPipeline
 
 class PrefixedStrictRedisCluster(StrictRedisCluster):
 
-    def __init__(self, *args, key_prefix, **kwargs):
+    def _set_key_prefix_variables(self, key_prefix):
         self.key_prefix = key_prefix
+        self.key_prefix_with_version = f'{key_prefix}:1:'
+
+        self.key_prefix_len = len(self.key_prefix)
+        self.key_prefix_with_version_len = len(self.key_prefix_with_version)
+
+    def __init__(self, *args, key_prefix, **kwargs):
+        self._set_key_prefix_variables(key_prefix)
         super().__init__(*args, **kwargs)
 
-    def make_key(self, key):
-        if str(key)[0] == ':':
-            return f'{self.key_prefix}{key}'
+    @staticmethod
+    def need_to_add_version(key):
+        return str(key)[0] != ':'
 
-        return f'{self.key_prefix}:1:{key}'
+    def make_key(self, key):
+        if self.need_to_add_version(key):
+            return f'{self.key_prefix_with_version}{key}'
+
+        return f'{self.key_prefix}{key}'
 
     def make_keys(self, keys):
         return [self.make_key(key) for key in keys]
+
+    def clean_key(self, key, clean_version=False):
+        if clean_version:
+            return key[self.key_prefix_with_version_len:]
+
+        return key[self.key_prefix_len:]
+
+    def clean_keys(self, keys, clean_version=False):
+        return [self.clean_key(key, clean_version=clean_version) for key in keys]
 
     def flushall(self):
         raise RedisClusterException("method PrefixedRedisCluster.flushall() is not implemented")
@@ -78,7 +98,8 @@ class PrefixedStrictRedisCluster(StrictRedisCluster):
         return super().incrbyfloat(self.make_key(name), amount=amount)
 
     def keys(self, pattern='*'):
-        return super().keys(pattern=self.make_key(pattern))
+        clean_version = self.need_to_add_version(pattern)
+        return self.clean_keys(super().keys(pattern=self.make_key(pattern)), clean_version=clean_version)
 
     def move(self, name, db):
         return super().move(self.make_key(name), db)
@@ -132,11 +153,20 @@ class PrefixedStrictRedisCluster(StrictRedisCluster):
         return super().type(self.make_key(name))
 
     # LIST COMMANDS
+    def _bpop(self, command, keys, timeout=0):
+        clean_version = self.need_to_add_version(keys[0])
+        result = command(self.make_keys(keys), timeout=timeout)
+
+        if result is not None:
+            return self.clean_key(result[0], clean_version), result[1]
+
+        return result
+
     def blpop(self, keys, timeout=0):
-        return super().blpop(self.make_keys(keys), timeout=timeout)
+        return self._bpop(super().blpop, keys, timeout=timeout)
 
     def brpop(self, keys, timeout=0):
-        return super().brpop(self.make_keys(keys), timeout=timeout)
+        return self._bpop(super().brpop, keys, timeout=timeout)
 
     def brpoplpush(self, src, dst, timeout=0):
         return super().brpoplpush(self.make_key(src), self.make_key(dst), timeout=timeout)
@@ -417,7 +447,7 @@ class PrefixedStrictRedisCluster(StrictRedisCluster):
 class PrefixedStrictClusterPipeline(StrictClusterPipeline, PrefixedStrictRedisCluster):
 
     def __init__(self, *args, key_prefix, **kwargs):
-        self.key_prefix = key_prefix
+        self._set_key_prefix_variables(key_prefix)
         super().__init__(*args, **kwargs)
 
 
